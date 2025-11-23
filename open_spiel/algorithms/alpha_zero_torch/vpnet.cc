@@ -172,34 +172,36 @@ std::vector<VPNetModel::InferenceOutputs> VPNetModel::Inference(
   torch::Tensor torch_inf_inputs =
       torch::from_blob(raw_observations.data(),
                        {inference_batch_size, flat_input_size_})
-          .to(torch_device_)
-          .clone();
+          .to(torch_device_);
   torch::Tensor torch_inf_legal_mask =
       torch::from_blob(raw_legal_mask.data(),
                        {inference_batch_size, num_actions_},
                        torch::TensorOptions().dtype(torch::kByte))
-          .to(torch_device_)
-          .clone();
+          .to(torch_device_);
 
   // Run the inference.
   model_->eval();
   std::vector<torch::Tensor> torch_outputs =
       model_(torch_inf_inputs, torch_inf_legal_mask);
 
-  torch::Tensor value_batch = torch_outputs[0];
-  torch::Tensor policy_batch = torch_outputs[1];
+  std::vector<float> value_batch(inference_batch_size);
+  std::vector<float> policy_batch(inference_batch_size * num_actions_);
+  torch::from_blob(value_batch.data(), {inference_batch_size, 1})
+    .copy_(torch_outputs[0]);
+  torch::from_blob(policy_batch.data(), {inference_batch_size, num_actions_})
+    .copy_(torch_outputs[1]);
 
   // Copy the Torch tensor output to the appropriate structure.
   std::vector<InferenceOutputs> output;
   output.reserve(inference_batch_size);
   for (int batch = 0; batch < inference_batch_size; ++batch) {
-    double value = value_batch[batch].item<double>();
+    double value = value_batch[batch];
 
     ActionsAndProbs state_policy;
     state_policy.reserve(inputs[batch].legal_actions.size());
     for (Action action : inputs[batch].legal_actions) {
       state_policy.push_back(
-          {action, policy_batch[batch][action].item<float>()});
+          {action, policy_batch[batch * num_actions_ + action]});
     }
 
     output.push_back({value, state_policy});
@@ -235,23 +237,19 @@ VPNetModel::LossInfo VPNetModel::Learn(const std::vector<TrainInputs>& inputs) {
   torch::Tensor torch_train_inputs =
       torch::from_blob(raw_train_inputs.data(),
                        {training_batch_size, flat_input_size_})
-          .to(torch_device_)
-          .clone();
+          .to(torch_device_);
   torch::Tensor torch_train_legal_mask =
       torch::from_blob(raw_legal_mask.data(),
                        {training_batch_size, num_actions_},
                        torch::TensorOptions().dtype(torch::kByte))
-          .to(torch_device_)
-          .clone();
+          .to(torch_device_);
   torch::Tensor torch_policy_targets =
       torch::from_blob(raw_policy_targets.data(),
                        {training_batch_size, num_actions_})
-          .to(torch_device_)
-          .clone();
+          .to(torch_device_);
   torch::Tensor torch_value_targets =
       torch::from_blob(raw_value_targets.data(), {training_batch_size, 1})
-          .to(torch_device_)
-          .clone();
+          .to(torch_device_);
 
   // Run a training step and get the losses.
   model_->train();
