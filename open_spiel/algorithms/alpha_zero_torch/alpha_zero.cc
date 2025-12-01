@@ -413,7 +413,7 @@ void learner(const open_spiel::Game& game, const AlphaZeroConfig& config,
       device_manager->SetLearning(config.explicit_learning);
 
       // Learn from them.
-      for (int i = 0; i < replay_buffer.Size() / config.train_batch_size; i++) {
+      for (int i = 0; i < 200; i++) {
         losses += learn_model->Learn(
             replay_buffer.Sample(&rng, config.train_batch_size));
       }
