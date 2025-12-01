@@ -432,7 +432,6 @@ void learner(const open_spiel::Game& game, const AlphaZeroConfig& config,
     }
     if (device_manager->Count() > 0) {
       for (int i = 0; i < device_manager->Count(); ++i) {
-        device_manager->Get(0, i)->Init();
         if (i != device_id) {
           device_manager->Get(0, i)->LoadCheckpoint(checkpoint_path);
         }
@@ -592,9 +591,6 @@ bool AlphaZero(AlphaZeroConfig config, StopToken* stop, bool resuming) {
     for (int i = 0; i < device_manager.Count(); ++i) {
       device_manager.Get(0, i)->LoadCheckpoint(
           start_info.model_checkpoint_step);
-      if (resuming) {
-          device_manager.Get(0, i)->Init();
-      }
     }
   }
 

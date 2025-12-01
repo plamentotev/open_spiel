@@ -108,7 +108,6 @@ VPNetModel::VPNetModel(const Game& game, const std::string& path,
                        const std::string& file_name, const std::string& device)
     : device_(device),
       path_(path),
-      init_(false),
       flat_input_size_(game.ObservationTensorSize()),
       num_actions_(game.NumDistinctActions()),
       model_config_(LoadModelConfig(path, file_name)),
@@ -151,21 +150,6 @@ void VPNetModel::LoadCheckpoint(const std::string& path) {
 std::vector<VPNetModel::InferenceOutputs> VPNetModel::Inference(
     const std::vector<InferenceInputs>& inputs) {
   int inference_batch_size = inputs.size();
-  if (!init_) {
-    std::vector<InferenceOutputs> output;
-    output.reserve(inference_batch_size);
-    for (int batch = 0; batch < inference_batch_size; ++batch) {
-        double prob = 1.0 / inputs[batch].legal_actions.size();
-        ActionsAndProbs state_policy;
-        state_policy.reserve(inputs[batch].legal_actions.size());
-        for (Action action : inputs[batch].legal_actions) {
-            state_policy.push_back({action, prob});
-        }
-        output.push_back({0.5, state_policy});
-    }
-
-    return output;
-  }
 
   // Format the data outside of torch. Random assignments can be very slow on
   // torch::Tensor objects and this approach is _much_ faster.
