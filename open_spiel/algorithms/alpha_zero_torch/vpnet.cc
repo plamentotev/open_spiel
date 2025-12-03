@@ -114,8 +114,8 @@ VPNetModel::VPNetModel(const Game& game, const std::string& path,
       model_(model_config_, TorchDeviceName(device)),
       model_optimizer_(
           model_->parameters(),
-          torch::optim::AdamOptions(  // NOLINT(misc-include-cleaner)
-              model_config_.learning_rate)),
+          torch::optim::SGDOptions(  // NOLINT(misc-include-cleaner)
+              model_config_.learning_rate).momentum(0.9).weight_decay(0.0001)),
       torch_device_(TorchDeviceName(device)) {
   // Some assumptions that we can remove eventually. The value net returns
   // a single value in terms of player 0 and the game is assumed to be zero-sum,
@@ -260,7 +260,7 @@ VPNetModel::LossInfo VPNetModel::Learn(const std::vector<TrainInputs>& inputs) {
                      torch_policy_targets, torch_value_targets);
 
   torch::Tensor total_loss =
-      torch_outputs[0] + torch_outputs[1] + torch_outputs[2];
+      torch_outputs[0] + torch_outputs[1];
 
   total_loss.backward();
 
@@ -268,7 +268,7 @@ VPNetModel::LossInfo VPNetModel::Learn(const std::vector<TrainInputs>& inputs) {
 
   return LossInfo(torch_outputs[0].item<float>(),
                   torch_outputs[1].item<float>(),
-                  torch_outputs[2].item<float>());
+                  0.0);
 }
 
 }  // namespace torch_az

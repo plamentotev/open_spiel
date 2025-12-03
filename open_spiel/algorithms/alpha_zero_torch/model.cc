@@ -353,26 +353,7 @@ std::vector<torch::Tensor> ModelImpl::losses(torch::Tensor inputs,
   torch::nn::MSELoss mse_loss;
   torch::Tensor value_loss = mse_loss(value_predictions, value_targets);
 
-  // L2 regularization loss (weights only).
-  torch::Tensor l2_regularization_loss = torch::full(
-      {1, 1}, 0, torch::TensorOptions().dtype(torch::kFloat32).device(device_));
-  for (auto& named_parameter : this->named_parameters()) {
-    // named_parameter is essentially a key-value pair:
-    //   {key, value} == {std::string name, torch::Tensor parameter}
-    std::string parameter_name = named_parameter.key();
-
-    // Do not include bias' in the loss.
-    if (absl::StrContains(parameter_name, "bias")) {
-      continue;
-    }
-
-    // Copy TensorFlow's l2_loss function.
-    // https://www.tensorflow.org/api_docs/python/tf/nn/l2_loss
-    l2_regularization_loss +=
-        weight_decay_ * torch::sum(torch::square(named_parameter.value())) / 2;
-  }
-
-  return {policy_loss, value_loss, l2_regularization_loss};
+  return {policy_loss, value_loss};
 }
 
 std::vector<torch::Tensor> ModelImpl::forward_(torch::Tensor x,
